@@ -76,7 +76,7 @@ export default function CatalogPage() {
             <select
               value={sortKey}
               onChange={(e) => setSortKey(e.target.value as SortKey)}
-              className="pl-8 pr-3 py-2 text-sm bg-surface border border-border rounded-[4px] text-text-primary appearance-none cursor-pointer hover:border-accent transition-colors focus:outline-none focus:border-accent"
+              className="pl-8 pr-3 py-2 text-sm bg-bg-elevated border border-border-subtle rounded-[4px] text-text-primary appearance-none cursor-pointer hover:border-accent transition-colors focus:outline-none focus:border-accent"
             >
               {SORT_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
