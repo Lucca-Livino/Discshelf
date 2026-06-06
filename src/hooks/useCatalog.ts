@@ -80,7 +80,10 @@ export function useAddToCatalog() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (body: { spotifyId: string }) => api.post('/catalog', body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['catalog'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['catalog'] })
+      qc.invalidateQueries({ queryKey: ['waitlist'] })
+    },
   })
 }
 

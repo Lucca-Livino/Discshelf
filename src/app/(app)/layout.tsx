@@ -17,14 +17,15 @@ const navItems = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
-  const { token, clearAuth } = useAuthStore()
+  const { token, _hasHydrated, clearAuth } = useAuthStore()
 
   useEffect(() => {
-    if (!token) {
+    if (_hasHydrated && !token) {
       router.replace('/login')
     }
-  }, [token, router])
+  }, [token, _hasHydrated, router])
 
+  if (!_hasHydrated) return null
   if (!token) return null
 
   function handleLogout() {

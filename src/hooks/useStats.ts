@@ -8,6 +8,7 @@ export interface Stats {
   totalReviews: number
   byMonth: { month: string; count: number }[]
   byGenre: { genre: string; count: number }[]
+  byArtist: { artist: string; count: number }[]
   byRecommender: { name: string; count: number }[]
 }
 

@@ -13,7 +13,20 @@ import { api } from '@/lib/api'
 import { toast } from '@/hooks/useToast'
 
 const ACCENT = '#e63946'
-const GENRE_COLORS = ['#e63946', '#c1121f', '#a4133c', '#ff6b6b', '#ee9b00', '#94d2bd', '#0a9396', '#005f73']
+const CHART_COLORS = [
+  '#e63946', // accent red
+  '#ee9b00', // amber
+  '#94d2bd', // sage
+  '#4cc9f0', // sky
+  '#c77dff', // lavender
+  '#f72585', // magenta
+  '#06d6a0', // mint
+  '#ff9f1c', // orange
+  '#a4133c', // crimson
+  '#3a86ff', // blue
+  '#8338ec', // violet
+  '#ffbe0b', // yellow
+]
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
   return (
@@ -139,6 +152,7 @@ export default function ProfilePage() {
 
   const hasMonthData = (stats?.byMonth?.length ?? 0) > 0
   const hasGenreData = (stats?.byGenre?.length ?? 0) > 0
+  const hasArtistData = (stats?.byArtist?.length ?? 0) > 0
   const hasRecommenderData = (stats?.byRecommender?.length ?? 0) > 0
 
   return (
@@ -213,7 +227,7 @@ export default function ProfilePage() {
                     paddingAngle={2}
                   >
                     {stats!.byGenre.map((_, i) => (
-                      <Cell key={i} fill={GENRE_COLORS[i % GENRE_COLORS.length]} />
+                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip content={<PieTooltip />} />
@@ -222,7 +236,7 @@ export default function ProfilePage() {
               <div className="space-y-1.5">
                 {stats!.byGenre.slice(0, 5).map((d, i) => (
                   <div key={d.genre} className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: GENRE_COLORS[i % GENRE_COLORS.length] }} />
+                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
                     <span className="text-text-primary text-xs flex-1 truncate">{d.genre}</span>
                     <span className="text-text-muted text-xs font-mono">{d.count}</span>
                   </div>
@@ -252,12 +266,47 @@ export default function ProfilePage() {
                   <XAxis type="number" tick={{ fill: '#6b6b6b', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
                   <YAxis type="category" dataKey="name" tick={{ fill: '#f0f0f0', fontSize: 11 }} axisLine={false} tickLine={false} width={80} />
                   <Tooltip content={<CustomTooltip />} cursor={{ fill: '#ffffff08' }} />
-                  <Bar dataKey="count" fill={ACCENT} radius={[0, 2, 2, 0]} maxBarSize={20} />
+                  <Bar dataKey="count" radius={[0, 2, 2, 0]} maxBarSize={20}>
+                    {stats!.byRecommender.map((_, i) => (
+                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
           )}
         </div>
+      </div>
+
+      {/* Artistas mais escutados */}
+      <div>
+        <SectionTitle>Artistas mais escutados</SectionTitle>
+        {statsLoading ? (
+          <ChartSkeleton height={200} />
+        ) : !hasArtistData ? (
+          <div className="h-[200px] flex items-center justify-center bg-bg-secondary border border-border-subtle">
+            <p className="text-text-muted text-sm">Nenhum dado ainda</p>
+          </div>
+        ) : (
+          <div className="bg-bg-secondary border border-border-subtle p-4">
+            <ResponsiveContainer width="100%" height={Math.max(120, stats!.byArtist.length * 32)}>
+              <BarChart
+                data={stats!.byArtist}
+                layout="vertical"
+                margin={{ top: 0, right: 8, bottom: 0, left: 0 }}
+              >
+                <XAxis type="number" tick={{ fill: '#6b6b6b', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <YAxis type="category" dataKey="artist" tick={{ fill: '#f0f0f0', fontSize: 11 }} axisLine={false} tickLine={false} width={110} />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#ffffff08' }} />
+                <Bar dataKey="count" radius={[0, 2, 2, 0]} maxBarSize={20}>
+                  {stats!.byArtist.map((_, i) => (
+                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
 
       {/* Configurações da conta */}
