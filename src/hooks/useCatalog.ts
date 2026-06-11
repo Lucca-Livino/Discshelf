@@ -1,6 +1,6 @@
 'use client'
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 
 interface ApiAlbum {
@@ -61,11 +61,15 @@ export interface CatalogResponse {
   limit: number
 }
 
-export function useCatalog(page = 1, limit = 40) {
-  return useQuery({
-    queryKey: ['catalog', page, limit],
-    queryFn: async () => {
-      const res = await api.get<ApiCatalogResponse>(`/catalog?page=${page}&limit=${limit}`)
+const CATALOG_LIMIT = 40
+
+export function useCatalog() {
+  return useInfiniteQuery({
+    queryKey: ['catalog'],
+    queryFn: async ({ pageParam = 1 }) => {
+      const res = await api.get<ApiCatalogResponse>(
+        `/catalog?page=${pageParam}&limit=${CATALOG_LIMIT}`,
+      )
       return {
         data: res.data.map(mapEntry),
         total: res.total,
@@ -73,6 +77,9 @@ export function useCatalog(page = 1, limit = 40) {
         limit: res.limit,
       } as CatalogResponse
     },
+    initialPageParam: 1,
+    getNextPageParam: (last) =>
+      last.page * last.limit < last.total ? last.page + 1 : undefined,
   })
 }
 

@@ -42,14 +42,17 @@ function sortAlbums(albums: CatalogAlbum[], key: SortKey): CatalogAlbum[] {
 }
 
 export default function CatalogPage() {
-  const { data, isLoading } = useCatalog()
+  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useCatalog()
   const removeFromCatalog = useRemoveFromCatalog()
   const [reviewAlbum, setReviewAlbum] = useState<CatalogAlbum | null>(null)
   const [showSearch, setShowSearch] = useState(false)
   const [sortKey, setSortKey] = useState<SortKey>('addedAt_desc')
 
-  const albums = data?.data ?? []
-  const total = data?.total ?? 0
+  const albums = useMemo(
+    () => data?.pages.flatMap((p) => p.data) ?? [],
+    [data],
+  )
+  const total = data?.pages[0]?.total ?? 0
 
   const sorted = useMemo(() => sortAlbums(albums, sortKey), [albums, sortKey])
   const catalogSpotifyIds = useMemo(() => new Set(albums.map((a) => a.spotifyId)), [albums])
@@ -116,19 +119,32 @@ export default function CatalogPage() {
           </p>
         </div>
       ) : (
-        <AlbumGrid>
-          {sorted.map((album) => (
-            <AlbumCard
-              key={album.id}
-              title={album.title}
-              artist={album.artist}
-              coverUrl={album.coverUrl}
-              hasReview={album.hasReview}
-              onClick={() => setReviewAlbum(album)}
-              onRemove={() => handleRemove(album.albumId, album.title)}
-            />
-          ))}
-        </AlbumGrid>
+        <>
+          <AlbumGrid>
+            {sorted.map((album) => (
+              <AlbumCard
+                key={album.id}
+                title={album.title}
+                artist={album.artist}
+                coverUrl={album.coverUrl}
+                hasReview={album.hasReview}
+                onClick={() => setReviewAlbum(album)}
+                onRemove={() => handleRemove(album.albumId, album.title)}
+              />
+            ))}
+          </AlbumGrid>
+          {hasNextPage && (
+            <div className="flex justify-center mt-6">
+              <button
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="px-6 py-2 bg-bg-elevated border border-border-subtle text-text-primary text-sm font-medium rounded-[4px] hover:border-accent transition-colors disabled:opacity-50"
+              >
+                {isFetchingNextPage ? 'Carregando...' : 'Carregar mais'}
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       <ReviewModal
