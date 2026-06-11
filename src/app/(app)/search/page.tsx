@@ -26,7 +26,9 @@ export default function SearchPage() {
   const addToCatalog = useAddToCatalog()
   const addToWaitlist = useAddToWaitlist()
 
-  const catalogSpotifyIds = new Set((catalogData?.data ?? []).map((a) => a.spotifyId))
+  const catalogSpotifyIds = new Set(
+    (catalogData?.pages.flatMap((p) => p.data) ?? []).map((a) => a.spotifyId),
+  )
   const waitlistSpotifyIds = new Set((waitlistData ?? []).map((e) => e.album.spotifyId))
 
   useEffect(() => {
