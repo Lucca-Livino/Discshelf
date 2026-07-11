@@ -80,11 +80,13 @@ export default function CatalogPage() {
   }
 
   async function handleRemove(entryId: string, albumId: string, title: string) {
-    setOrder((prev) => prev.filter((a) => a.id !== entryId)) // otimista
+    const prev = order // snapshot pra rollback
+    setOrder((cur) => cur.filter((a) => a.id !== entryId)) // otimista
     try {
       await removeFromCatalog.mutateAsync(albumId)
       toast({ title: `"${title}" removido do catálogo` })
     } catch {
+      setOrder(prev) // rollback
       toast({ variant: 'destructive', title: 'Erro ao remover álbum' })
     }
   }

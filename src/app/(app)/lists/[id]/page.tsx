@@ -100,10 +100,12 @@ export default function ListDetailPage() {
   }
 
   async function handleRemoveItem(itemId: string) {
-    setOrder((prev) => prev.filter((i) => i.id !== itemId)) // otimista
+    const prev = order // snapshot pra rollback
+    setOrder((cur) => cur.filter((i) => i.id !== itemId)) // otimista
     try {
       await removeItem.mutateAsync({ listId: id, itemId })
     } catch {
+      setOrder(prev) // rollback
       toast({ variant: 'destructive', title: 'Erro ao remover item' })
     }
   }

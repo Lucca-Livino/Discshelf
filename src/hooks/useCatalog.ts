@@ -118,7 +118,8 @@ export function useAddToCatalog() {
 export function useRemoveFromCatalog() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (catalogEntryId: string) => api.delete(`/catalog/${catalogEntryId}`),
+    // endpoint DELETE /catalog/:albumId resolve a entry pelo album id (não pelo entry id)
+    mutationFn: (albumId: string) => api.delete(`/catalog/${albumId}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['catalog'] }),
   })
 }
