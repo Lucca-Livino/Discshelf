@@ -103,7 +103,10 @@ export function useReorderList() {
     // orderedIds = item ids na nova ordem
     mutationFn: ({ id, orderedIds }: { id: string; orderedIds: string[] }) =>
       api.patch(`/lists/${id}/reorder`, { orderedIds }),
-    onSettled: (_d, _e, { id }) => qc.invalidateQueries({ queryKey: ['lists', id] }),
+    onSettled: (_d, _e, { id }) => {
+      qc.invalidateQueries({ queryKey: ['lists', id] })
+      qc.invalidateQueries({ queryKey: ['lists'] }) // index: covers/count dos cards
+    },
   })
 }
 

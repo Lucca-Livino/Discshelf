@@ -72,10 +72,14 @@ export default function CatalogPage() {
   )
 
   function handleReorder(next: CatalogAlbum[]) {
+    const prev = order      // snapshot pra rollback
     setOrder(next)          // otimista
     setSortKey('custom')    // arrastar sempre vira ordem custom
     reorderCatalog.mutate(next.map((a) => a.id), {
-      onError: () => toast({ variant: 'destructive', title: 'Erro ao salvar ordem' }),
+      onError: () => {
+        setOrder(prev)      // rollback: backend rejeitou
+        toast({ variant: 'destructive', title: 'Erro ao salvar ordem' })
+      },
     })
   }
 

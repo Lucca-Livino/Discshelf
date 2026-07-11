@@ -111,10 +111,16 @@ export default function ListDetailPage() {
   }
 
   function handleReorder(next: ListItem[]) {
+    const prev = order // snapshot p/ rollback
     setOrder(next) // otimista
     reorderList.mutate(
       { id, orderedIds: next.map((i) => i.id) },
-      { onError: () => toast({ variant: 'destructive', title: 'Erro ao salvar ordem' }) },
+      {
+        onError: () => {
+          setOrder(prev) // rollback: backend rejeitou
+          toast({ variant: 'destructive', title: 'Erro ao salvar ordem' })
+        },
+      },
     )
   }
 
