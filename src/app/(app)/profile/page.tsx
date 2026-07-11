@@ -78,10 +78,11 @@ export default function ProfilePage() {
   const { user, setAuth, clearAuth } = useAuthStore()
   const { data: listsData } = useLists()
   const { data: stats, isLoading: statsLoading } = useStats()
-  const { data: catalog } = useCatalogAll()
 
   // gênero selecionado no gráfico de pizza → popup com álbuns daquele gênero
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null)
+  // só busca o catálogo cheio quando um gênero é aberto (evita fetch eager por page-load)
+  const { data: catalog } = useCatalogAll({ enabled: selectedGenre !== null })
   const genreAlbums = selectedGenre
     ? (catalog?.data ?? []).filter((a) => a.genre === selectedGenre)
     : []

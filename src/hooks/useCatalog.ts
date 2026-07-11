@@ -85,13 +85,14 @@ export function useCatalog() {
   })
 }
 
-export function useCatalogAll() {
+export function useCatalogAll(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['catalog', 'all'],
     queryFn: async () => {
       const res = await api.get<{ data: ApiCatalogEntry[]; total: number }>('/catalog/all')
       return { data: res.data.map(mapEntry), total: res.total }
     },
+    enabled: options?.enabled ?? true,
   })
 }
 
