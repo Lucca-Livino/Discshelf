@@ -64,9 +64,11 @@ export function AlbumCard({
         {onRemove && (
           <div className="mt-2 flex">
             <button
+              type="button"
               onClick={(e) => { e.stopPropagation(); onRemove() }}
               className="flex items-center justify-center w-7 h-7 bg-white/10 hover:bg-accent rounded-[4px] transition-colors"
               title="Remover do catálogo"
+              aria-label="Remover do catálogo"
             >
               <Trash2 size={12} className="text-white" />
             </button>
@@ -125,9 +127,11 @@ export function AlbumCardRemovable({
         <p className="text-white/70 text-xs leading-tight line-clamp-1">{artist}</p>
         <div className="mt-2">
           <button
+            type="button"
             onClick={onRemove}
             className="flex items-center justify-center w-7 h-7 bg-white/10 hover:bg-accent rounded-[4px] transition-colors"
             title="Remover da lista"
+            aria-label="Remover da lista"
           >
             <Trash2 size={12} className="text-white" />
           </button>

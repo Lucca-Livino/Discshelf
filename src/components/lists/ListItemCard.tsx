@@ -53,9 +53,11 @@ export function ListItemCard({
         )}
         <div className="mt-2">
           <button
+            type="button"
             onClick={onRemove}
             className="flex items-center justify-center w-7 h-7 bg-white/10 hover:bg-accent rounded-[4px] transition-colors"
             title="Remover da lista"
+            aria-label="Remover da lista"
           >
             <Trash2 size={12} className="text-white" />
           </button>
