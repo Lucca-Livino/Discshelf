@@ -9,6 +9,7 @@ interface AlbumCardProps {
   artist: string
   coverUrl: string
   hasReview?: boolean
+  recommendedBy?: string | null
   onClick?: () => void
   onRemove?: () => void
   onAdd?: () => void
@@ -22,6 +23,7 @@ export function AlbumCard({
   artist,
   coverUrl,
   hasReview,
+  recommendedBy,
   onClick,
   onRemove,
   onAdd,
@@ -53,6 +55,11 @@ export function AlbumCard({
       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/65 transition-all duration-200 flex flex-col justify-end p-2.5 opacity-0 group-hover:opacity-100">
         <p className="text-white text-xs font-medium leading-tight line-clamp-1 mb-0.5">{title}</p>
         <p className="text-white/70 text-xs leading-tight line-clamp-1">{artist}</p>
+        {recommendedBy && (
+          <p className="text-accent text-xs leading-tight line-clamp-1 mt-0.5">
+            rec. por {recommendedBy}
+          </p>
+        )}
 
         {onRemove && (
           <div className="mt-2 flex">

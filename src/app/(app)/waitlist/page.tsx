@@ -109,6 +109,7 @@ export default function WaitlistPage() {
                   title={entry.album.title}
                   artist={entry.album.artist}
                   coverUrl={entry.album.coverUrl}
+                  recommendedBy={entry.recommendedBy}
                   onRemove={() => handleRemove(entry.albumId)}
                   onAdd={() => handleAddToShelf(entry.album.spotifyId, entry.albumId, entry.album.title)}
                   inShelf={false}

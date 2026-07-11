@@ -1,8 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import { Disc, Mic2, Music } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { useCreateList } from '@/hooks/useLists'
+import { useCreateList, type ListType } from '@/hooks/useLists'
+import { cn } from '@/lib/utils'
 import { toast } from '@/hooks/useToast'
 
 interface CreateListModalProps {
@@ -10,24 +12,33 @@ interface CreateListModalProps {
   onClose: () => void
 }
 
+const TYPE_OPTIONS: { value: ListType; label: string; icon: typeof Disc }[] = [
+  { value: 'album',  label: 'Albums',  icon: Disc },
+  { value: 'artist', label: 'Artists', icon: Mic2 },
+  { value: 'track',  label: 'Tracks',  icon: Music },
+]
+
 export function CreateListModal({ open, onClose }: CreateListModalProps) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [type, setType] = useState<ListType>('album')
   const createList = useCreateList()
+
+  function reset() {
+    setName('')
+    setDescription('')
+    setType('album')
+  }
 
   async function handleCreate() {
     if (!name.trim()) return
     try {
-      await createList.mutateAsync({ name: name.trim(), description: description || undefined })
+      await createList.mutateAsync({ name: name.trim(), description: description || undefined, type })
       toast({ title: 'Lista criada!' })
-      setName('')
-      setDescription('')
+      reset()
       onClose()
-    } catch (err) {
-      toast({
-        variant: 'destructive',
-        title: 'Erro ao criar lista',
-      })
+    } catch {
+      toast({ variant: 'destructive', title: 'Erro ao criar lista' })
     }
   }
 
@@ -38,6 +49,24 @@ export function CreateListModal({ open, onClose }: CreateListModalProps) {
           <DialogTitle>New List</DialogTitle>
         </DialogHeader>
         <div className="mt-4 space-y-3">
+          <div className="grid grid-cols-3 gap-2">
+            {TYPE_OPTIONS.map(({ value, label, icon: Icon }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setType(value)}
+                className={cn(
+                  'flex flex-col items-center gap-1 py-3 border rounded-[4px] text-xs transition-colors',
+                  type === value
+                    ? 'border-accent bg-accent/10 text-text-primary'
+                    : 'border-border-subtle text-text-muted hover:border-accent hover:text-text-primary',
+                )}
+              >
+                <Icon size={18} />
+                {label}
+              </button>
+            ))}
+          </div>
           <input
             type="text"
             value={name}

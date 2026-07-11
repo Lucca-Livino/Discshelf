@@ -9,6 +9,8 @@ import {
 import { useAuthStore } from '@/stores/authStore'
 import { useLists } from '@/hooks/useLists'
 import { useStats } from '@/hooks/useStats'
+import { useCatalogAll } from '@/hooks/useCatalog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { api } from '@/lib/api'
 import { toast } from '@/hooks/useToast'
 
@@ -76,6 +78,13 @@ export default function ProfilePage() {
   const { user, setAuth, clearAuth } = useAuthStore()
   const { data: listsData } = useLists()
   const { data: stats, isLoading: statsLoading } = useStats()
+  const { data: catalog } = useCatalogAll()
+
+  // gênero selecionado no gráfico de pizza → popup com álbuns daquele gênero
+  const [selectedGenre, setSelectedGenre] = useState<string | null>(null)
+  const genreAlbums = selectedGenre
+    ? (catalog?.data ?? []).filter((a) => a.genre === selectedGenre)
+    : []
 
   const [name, setName] = useState(user?.name ?? '')
   const [email, setEmail] = useState(user?.email ?? '')
@@ -225,9 +234,11 @@ export default function ProfilePage() {
                     innerRadius={35}
                     outerRadius={60}
                     paddingAngle={2}
+                    onClick={(d: any) => setSelectedGenre(d?.genre ?? d?.payload?.genre ?? null)}
+                    className="cursor-pointer focus:outline-none"
                   >
                     {stats!.byGenre.map((_, i) => (
-                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} className="cursor-pointer focus:outline-none" />
                     ))}
                   </Pie>
                   <Tooltip content={<PieTooltip />} />
@@ -235,11 +246,15 @@ export default function ProfilePage() {
               </ResponsiveContainer>
               <div className="space-y-1.5">
                 {stats!.byGenre.slice(0, 5).map((d, i) => (
-                  <div key={d.genre} className="flex items-center gap-2">
+                  <button
+                    key={d.genre}
+                    onClick={() => setSelectedGenre(d.genre)}
+                    className="flex items-center gap-2 w-full text-left hover:bg-bg-elevated -mx-1 px-1 py-0.5 rounded-[4px] transition-colors"
+                  >
                     <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
                     <span className="text-text-primary text-xs flex-1 truncate">{d.genre}</span>
                     <span className="text-text-muted text-xs font-mono">{d.count}</span>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -382,6 +397,29 @@ export default function ProfilePage() {
           </button>
         </div>
       </div>
+
+      {/* Popup: álbuns de um gênero na shelf */}
+      <Dialog open={!!selectedGenre} onOpenChange={(v) => !v && setSelectedGenre(null)}>
+        <DialogContent className="w-full max-w-sm p-5 rounded-none">
+          <DialogHeader>
+            <DialogTitle>{selectedGenre}</DialogTitle>
+          </DialogHeader>
+          <p className="text-text-muted text-xs font-mono mt-1">
+            {genreAlbums.length} álbum{genreAlbums.length !== 1 ? 's' : ''}
+          </p>
+          <div className="mt-3 max-h-[50vh] overflow-y-auto space-y-1">
+            {genreAlbums.length === 0 ? (
+              <p className="text-text-muted text-sm">Nenhum álbum encontrado</p>
+            ) : (
+              genreAlbums.map((a) => (
+                <p key={a.id} className="text-text-primary text-sm truncate">
+                  {a.title}
+                </p>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

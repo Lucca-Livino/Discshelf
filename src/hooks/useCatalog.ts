@@ -36,6 +36,7 @@ export interface CatalogAlbum {
   artist: string
   coverUrl: string
   year: number
+  genre: string | null
   addedAt: string
   hasReview: boolean
 }
@@ -49,6 +50,7 @@ function mapEntry(entry: ApiCatalogEntry): CatalogAlbum {
     artist: entry.album.artist,
     coverUrl: entry.album.coverUrl,
     year: entry.album.year,
+    genre: entry.album.genre,
     addedAt: entry.addedAt,
     hasReview: entry.hasReview,
   }
@@ -80,6 +82,25 @@ export function useCatalog() {
     initialPageParam: 1,
     getNextPageParam: (last) =>
       last.page * last.limit < last.total ? last.page + 1 : undefined,
+  })
+}
+
+export function useCatalogAll() {
+  return useQuery({
+    queryKey: ['catalog', 'all'],
+    queryFn: async () => {
+      const res = await api.get<{ data: ApiCatalogEntry[]; total: number }>('/catalog/all')
+      return { data: res.data.map(mapEntry), total: res.total }
+    },
+  })
+}
+
+export function useReorderCatalog() {
+  const qc = useQueryClient()
+  return useMutation({
+    // orderedIds = catalog entry ids na nova ordem
+    mutationFn: (orderedIds: string[]) => api.patch('/catalog/reorder', { orderedIds }),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['catalog'] }),
   })
 }
 
