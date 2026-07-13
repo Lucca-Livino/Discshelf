@@ -109,6 +109,7 @@ export default function WaitlistPage() {
                   title={entry.album.title}
                   artist={entry.album.artist}
                   coverUrl={entry.album.coverUrl}
+                  recommendedBy={entry.recommendedBy}
                   onRemove={() => handleRemove(entry.albumId)}
                   onAdd={() => handleAddToShelf(entry.album.spotifyId, entry.albumId, entry.album.title)}
                   inShelf={false}
@@ -158,9 +159,11 @@ export default function WaitlistPage() {
                     Add to Shelf
                   </button>
                   <button
+                    type="button"
                     onClick={() => handleRemove(entry.albumId)}
                     className="flex items-center justify-center w-7 h-7 bg-bg-primary hover:bg-accent text-text-muted hover:text-white rounded-[4px] transition-colors"
                     title="Remover da lista"
+                    aria-label="Remover da lista"
                   >
                     <Trash2 size={12} />
                   </button>

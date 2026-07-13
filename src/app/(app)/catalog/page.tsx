@@ -1,15 +1,22 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Plus, ArrowUpDown } from 'lucide-react'
-import { useCatalog, useRemoveFromCatalog, type CatalogAlbum } from '@/hooks/useCatalog'
+import {
+  useCatalogAll,
+  useReorderCatalog,
+  useRemoveFromCatalog,
+  type CatalogAlbum,
+} from '@/hooks/useCatalog'
 import { AlbumGrid } from '@/components/album/AlbumGrid'
 import { AlbumCard, AlbumCardSkeleton } from '@/components/album/AlbumCard'
+import { SortableGrid } from '@/components/dnd/SortableGrid'
 import { ReviewModal } from '@/components/album/ReviewModal'
 import { SearchBar } from '@/components/search/SearchBar'
 import { toast } from '@/hooks/useToast'
 
 type SortKey =
+  | 'custom'
   | 'addedAt_desc'
   | 'addedAt_asc'
   | 'title_asc'
@@ -19,6 +26,7 @@ type SortKey =
   | 'year_asc'
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: 'custom',       label: 'Minha ordem' },
   { value: 'addedAt_desc', label: 'Recently Added' },
   { value: 'addedAt_asc',  label: 'Oldest Added' },
   { value: 'title_asc',    label: 'Title A → Z' },
@@ -31,6 +39,7 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
 function sortAlbums(albums: CatalogAlbum[], key: SortKey): CatalogAlbum[] {
   const sorted = [...albums]
   switch (key) {
+    case 'custom':       return sorted // já vem na ordem custom (position) do backend
     case 'addedAt_desc': return sorted.sort((a, b) => b.addedAt.localeCompare(a.addedAt))
     case 'addedAt_asc':  return sorted.sort((a, b) => a.addedAt.localeCompare(b.addedAt))
     case 'title_asc':    return sorted.sort((a, b) => a.title.localeCompare(b.title))
@@ -42,28 +51,61 @@ function sortAlbums(albums: CatalogAlbum[], key: SortKey): CatalogAlbum[] {
 }
 
 export default function CatalogPage() {
-  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useCatalog()
+  const { data, isLoading } = useCatalogAll()
+  const reorderCatalog = useReorderCatalog()
   const removeFromCatalog = useRemoveFromCatalog()
   const [reviewAlbum, setReviewAlbum] = useState<CatalogAlbum | null>(null)
   const [showSearch, setShowSearch] = useState(false)
-  const [sortKey, setSortKey] = useState<SortKey>('addedAt_desc')
+  const [sortKey, setSortKey] = useState<SortKey>('custom')
 
-  const albums = useMemo(
-    () => data?.pages.flatMap((p) => p.data) ?? [],
-    [data],
+  // ordem custom (position) mantida localmente — fonte de verdade pro drag
+  const [order, setOrder] = useState<CatalogAlbum[]>([])
+  useEffect(() => {
+    if (data?.data) setOrder(data.data)
+  }, [data])
+
+  const total = order.length
+  const displayed = useMemo(() => sortAlbums(order, sortKey), [order, sortKey])
+  const catalogSpotifyIds = useMemo(
+    () => new Set(order.map((a) => a.spotifyId)),
+    [order],
   )
-  const total = data?.pages[0]?.total ?? 0
 
-  const sorted = useMemo(() => sortAlbums(albums, sortKey), [albums, sortKey])
-  const catalogSpotifyIds = useMemo(() => new Set(albums.map((a) => a.spotifyId)), [albums])
+  function handleReorder(next: CatalogAlbum[]) {
+    const prev = order      // snapshot pra rollback
+    setOrder(next)          // otimista
+    setSortKey('custom')    // arrastar sempre vira ordem custom
+    reorderCatalog.mutate(next.map((a) => a.id), {
+      onError: () => {
+        setOrder(prev)      // rollback: backend rejeitou
+        toast({ variant: 'destructive', title: 'Erro ao salvar ordem' })
+      },
+    })
+  }
 
-  async function handleRemove(albumId: string, title: string) {
+  async function handleRemove(entryId: string, albumId: string, title: string) {
+    const prev = order // snapshot pra rollback
+    setOrder((cur) => cur.filter((a) => a.id !== entryId)) // otimista
     try {
       await removeFromCatalog.mutateAsync(albumId)
       toast({ title: `"${title}" removido do catálogo` })
     } catch {
+      setOrder(prev) // rollback
       toast({ variant: 'destructive', title: 'Erro ao remover álbum' })
     }
+  }
+
+  function renderCard(album: CatalogAlbum) {
+    return (
+      <AlbumCard
+        title={album.title}
+        artist={album.artist}
+        coverUrl={album.coverUrl}
+        hasReview={album.hasReview}
+        onClick={() => setReviewAlbum(album)}
+        onRemove={() => handleRemove(album.id, album.albumId, album.title)}
+      />
+    )
   }
 
   return (
@@ -111,7 +153,7 @@ export default function CatalogPage() {
             <AlbumCardSkeleton key={i} />
           ))}
         </AlbumGrid>
-      ) : sorted.length === 0 ? (
+      ) : displayed.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <p className="text-text-muted text-lg mb-2">Sua coleção está vazia</p>
           <p className="text-text-muted text-sm">
@@ -119,32 +161,7 @@ export default function CatalogPage() {
           </p>
         </div>
       ) : (
-        <>
-          <AlbumGrid>
-            {sorted.map((album) => (
-              <AlbumCard
-                key={album.id}
-                title={album.title}
-                artist={album.artist}
-                coverUrl={album.coverUrl}
-                hasReview={album.hasReview}
-                onClick={() => setReviewAlbum(album)}
-                onRemove={() => handleRemove(album.albumId, album.title)}
-              />
-            ))}
-          </AlbumGrid>
-          {hasNextPage && (
-            <div className="flex justify-center mt-6">
-              <button
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-                className="px-6 py-2 bg-bg-elevated border border-border-subtle text-text-primary text-sm font-medium rounded-[4px] hover:border-accent transition-colors disabled:opacity-50"
-              >
-                {isFetchingNextPage ? 'Carregando...' : 'Carregar mais'}
-              </button>
-            </div>
-          )}
-        </>
+        <SortableGrid items={displayed} onReorder={handleReorder} renderItem={renderCard} />
       )}
 
       <ReviewModal

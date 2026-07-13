@@ -36,6 +36,7 @@ export interface CatalogAlbum {
   artist: string
   coverUrl: string
   year: number
+  genre: string | null
   addedAt: string
   hasReview: boolean
 }
@@ -49,6 +50,7 @@ function mapEntry(entry: ApiCatalogEntry): CatalogAlbum {
     artist: entry.album.artist,
     coverUrl: entry.album.coverUrl,
     year: entry.album.year,
+    genre: entry.album.genre,
     addedAt: entry.addedAt,
     hasReview: entry.hasReview,
   }
@@ -83,6 +85,26 @@ export function useCatalog() {
   })
 }
 
+export function useCatalogAll(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ['catalog', 'all'],
+    queryFn: async () => {
+      const res = await api.get<{ data: ApiCatalogEntry[]; total: number }>('/catalog/all')
+      return { data: res.data.map(mapEntry), total: res.total }
+    },
+    enabled: options?.enabled ?? true,
+  })
+}
+
+export function useReorderCatalog() {
+  const qc = useQueryClient()
+  return useMutation({
+    // orderedIds = catalog entry ids na nova ordem
+    mutationFn: (orderedIds: string[]) => api.patch('/catalog/reorder', { orderedIds }),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['catalog'] }),
+  })
+}
+
 export function useAddToCatalog() {
   const qc = useQueryClient()
   return useMutation({
@@ -97,7 +119,8 @@ export function useAddToCatalog() {
 export function useRemoveFromCatalog() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (catalogEntryId: string) => api.delete(`/catalog/${catalogEntryId}`),
+    // endpoint DELETE /catalog/:albumId resolve a entry pelo album id (não pelo entry id)
+    mutationFn: (albumId: string) => api.delete(`/catalog/${albumId}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['catalog'] }),
   })
 }

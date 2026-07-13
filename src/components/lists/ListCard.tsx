@@ -1,13 +1,35 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import type { AlbumList } from '@/hooks/useLists'
+import type { AlbumList, ListType } from '@/hooks/useLists'
 
 interface ListCardProps {
   list: AlbumList
 }
 
+const NOUN: Record<ListType, [string, string]> = {
+  album:  ['album', 'albums'],
+  artist: ['artist', 'artists'],
+  track:  ['track', 'tracks'],
+}
+
+function Cover({ url, alt, rounded }: { url: string | null; alt: string; rounded: boolean }) {
+  if (!url) return <div className={`w-full h-full bg-bg-elevated ${rounded ? 'rounded-full' : ''}`} />
+  return (
+    <Image
+      src={url}
+      alt={alt}
+      fill
+      className={`object-cover ${rounded ? 'rounded-full' : ''}`}
+      unoptimized
+    />
+  )
+}
+
 export function ListCard({ list }: ListCardProps) {
   const covers = list.albums.slice(0, 4)
+  const rounded = list.type === 'artist'
+  const [singular, plural] = NOUN[list.type] ?? NOUN.album
+  const noun = list.albumCount === 1 ? singular : plural
 
   return (
     <Link
@@ -20,13 +42,7 @@ export function ListCard({ list }: ListCardProps) {
             <span className="text-text-muted text-xs">Empty</span>
           </div>
         ) : covers.length === 1 ? (
-          <Image
-            src={covers[0].coverUrl}
-            alt={covers[0].title}
-            fill
-            className="object-cover"
-            unoptimized
-          />
+          <Cover url={covers[0].coverUrl} alt={covers[0].title} rounded={rounded} />
         ) : (
           <div className="relative w-full h-full">
             {covers.map((cover, i) => (
@@ -41,13 +57,7 @@ export function ListCard({ list }: ListCardProps) {
                   zIndex: i + 1,
                 }}
               >
-                <Image
-                  src={cover.coverUrl}
-                  alt={cover.title}
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
+                <Cover url={cover.coverUrl} alt={cover.title} rounded={rounded} />
               </div>
             ))}
           </div>
@@ -59,7 +69,7 @@ export function ListCard({ list }: ListCardProps) {
           {list.name}
         </p>
         <p className="text-text-muted text-xs font-mono mt-0.5">
-          {list.albumCount} album{list.albumCount !== 1 ? 's' : ''}
+          {list.albumCount} {noun}
         </p>
       </div>
 

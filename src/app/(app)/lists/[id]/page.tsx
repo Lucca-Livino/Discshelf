@@ -1,13 +1,51 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Plus, Trash2, Check, Edit2 } from 'lucide-react'
-import { useList, useUpdateList, useDeleteList, useRemoveAlbumFromList, useAddAlbumToList, type ListDetail } from '@/hooks/useLists'
+import { Plus, Trash2, Edit2 } from 'lucide-react'
+import {
+  useList,
+  useUpdateList,
+  useDeleteList,
+  useRemoveItemFromList,
+  useAddItemToList,
+  useReorderList,
+  type ListDetail,
+  type ListItem,
+  type ListType,
+} from '@/hooks/useLists'
 import { AlbumGrid } from '@/components/album/AlbumGrid'
-import { AlbumCardSkeleton, AlbumCardRemovable } from '@/components/album/AlbumCard'
+import { AlbumCardSkeleton } from '@/components/album/AlbumCard'
+import { ListItemCard } from '@/components/lists/ListItemCard'
+import { SortableGrid } from '@/components/dnd/SortableGrid'
 import { SearchBar } from '@/components/search/SearchBar'
 import { toast } from '@/hooks/useToast'
+
+const ADD_LABEL: Record<ListType, string> = {
+  album: 'Add Album',
+  artist: 'Add Artist',
+  track: 'Add Track',
+}
+
+const EMPTY_LABEL: Record<ListType, string> = {
+  album: 'Adicione álbuns com o botão acima',
+  artist: 'Adicione artistas com o botão acima',
+  track: 'Adicione faixas com o botão acima',
+}
+
+// item (union) → shape genérico do card
+function present(item: ListItem, type: ListType) {
+  if (type === 'artist') {
+    const a = item as Extract<ListItem, { imageUrl: string | null }>
+    return { coverUrl: a.imageUrl, primary: a.name, secondary: a.genre ?? '', rounded: true, fallback: 'artist' as const }
+  }
+  if (type === 'track') {
+    const t = item as Extract<ListItem, { albumTitle: string | null }>
+    return { coverUrl: t.coverUrl, primary: t.name, secondary: [t.artist, t.albumTitle].filter(Boolean).join(' · '), rounded: false, fallback: 'track' as const }
+  }
+  const al = item as Extract<ListItem, { title: string }>
+  return { coverUrl: al.coverUrl, primary: al.title, secondary: al.artist, rounded: false, fallback: undefined }
+}
 
 export default function ListDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -15,8 +53,9 @@ export default function ListDetailPage() {
   const { data, isLoading } = useList(id)
   const updateList = useUpdateList()
   const deleteList = useDeleteList()
-  const removeAlbum = useRemoveAlbumFromList()
-  const addAlbum = useAddAlbumToList()
+  const removeItem = useRemoveItemFromList()
+  const addItem = useAddItemToList()
+  const reorderList = useReorderList()
 
   const [showSearch, setShowSearch] = useState(false)
   const [editingName, setEditingName] = useState(false)
@@ -25,6 +64,13 @@ export default function ListDetailPage() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const list: ListDetail | undefined = data?.list
+  const type: ListType = list?.type ?? 'album'
+
+  // ordem local (position) — fonte de verdade pro drag
+  const [order, setOrder] = useState<ListItem[]>([])
+  useEffect(() => {
+    if (list?.items) setOrder(list.items)
+  }, [list])
 
   function startEditName() {
     setNameValue(list?.name ?? '')
@@ -53,30 +99,42 @@ export default function ListDetailPage() {
     }
   }
 
-  async function handleRemoveAlbum(albumId: string) {
+  async function handleRemoveItem(itemId: string) {
+    const prev = order // snapshot pra rollback
+    setOrder((cur) => cur.filter((i) => i.id !== itemId)) // otimista
     try {
-      await removeAlbum.mutateAsync({ listId: id, albumId })
+      await removeItem.mutateAsync({ listId: id, itemId })
     } catch {
-      toast({ variant: 'destructive', title: 'Erro ao remover álbum' })
+      setOrder(prev) // rollback
+      toast({ variant: 'destructive', title: 'Erro ao remover item' })
     }
   }
 
-  async function handleAddToList(spotifyId: string) {
+  function handleReorder(next: ListItem[]) {
+    const prev = order // snapshot p/ rollback
+    setOrder(next) // otimista
+    reorderList.mutate(
+      { id, orderedIds: next.map((i) => i.id) },
+      {
+        onError: () => {
+          setOrder(prev) // rollback: backend rejeitou
+          toast({ variant: 'destructive', title: 'Erro ao salvar ordem' })
+        },
+      },
+    )
+  }
+
+  async function handleAddItem(spotifyId: string) {
     setAddingSpotifyId(spotifyId)
     try {
-      await addAlbum.mutateAsync({ listId: id, spotifyId })
-      toast({ title: 'Álbum adicionado à lista!' })
-    } catch (err) {
-      toast({
-        variant: 'destructive',
-        title: 'Erro ao adicionar',
-      })
+      await addItem.mutateAsync({ listId: id, spotifyId })
+      toast({ title: 'Adicionado à lista!' })
+    } catch {
+      toast({ variant: 'destructive', title: 'Erro ao adicionar' })
     } finally {
       setAddingSpotifyId(null)
     }
   }
-
-  const albums = list?.albums ?? []
 
   return (
     <div className="p-4 md:p-6">
@@ -114,7 +172,7 @@ export default function ListDetailPage() {
             className="flex items-center gap-1.5 px-3 py-2 bg-accent hover:bg-accent-hover text-white text-sm font-medium rounded-[4px] transition-colors"
           >
             <Plus size={14} />
-            Add Album
+            {ADD_LABEL[type]}
           </button>
           <button
             onClick={handleDelete}
@@ -129,8 +187,9 @@ export default function ListDetailPage() {
       {showSearch && (
         <div className="mb-4 md:mb-6">
           <SearchBar
+            kind={type}
             listId={id}
-            onAddToList={handleAddToList}
+            onAddToList={handleAddItem}
             addingToListId={addingSpotifyId}
             onClose={() => setShowSearch(false)}
           />
@@ -143,23 +202,29 @@ export default function ListDetailPage() {
             <AlbumCardSkeleton key={i} />
           ))}
         </AlbumGrid>
-      ) : albums.length === 0 ? (
+      ) : order.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <p className="text-text-muted text-lg mb-2">Lista vazia</p>
-          <p className="text-text-muted text-sm">Adicione álbuns com o botão acima</p>
+          <p className="text-text-muted text-sm">{EMPTY_LABEL[type]}</p>
         </div>
       ) : (
-        <AlbumGrid>
-          {albums.map((album) => (
-            <AlbumCardRemovable
-              key={album.id}
-              title={album.title}
-              artist={album.artist}
-              coverUrl={album.coverUrl}
-              onRemove={() => handleRemoveAlbum(album.id)}
-            />
-          ))}
-        </AlbumGrid>
+        <SortableGrid
+          items={order}
+          onReorder={handleReorder}
+          renderItem={(item) => {
+            const p = present(item, type)
+            return (
+              <ListItemCard
+                coverUrl={p.coverUrl}
+                primary={p.primary}
+                secondary={p.secondary}
+                rounded={p.rounded}
+                fallback={p.fallback}
+                onRemove={() => handleRemoveItem(item.id)}
+              />
+            )
+          }}
+        />
       )}
     </div>
   )

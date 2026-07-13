@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useAuthStore } from '@/stores/authStore'
-import { BookOpen, Search, List, User, LogOut, Clock } from 'lucide-react'
+import { BookOpen, Search, List, User, LogOut, Clock, PanelLeftClose, PanelLeft } from 'lucide-react'
 
 const navItems = [
   { href: '/catalog', label: 'Shelf', icon: BookOpen },
@@ -18,6 +18,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const { token, _hasHydrated, clearAuth } = useAuthStore()
+
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  useEffect(() => {
+    const saved = localStorage.getItem('discshelf-sidebar')
+    if (saved !== null) setSidebarOpen(saved === '1')
+  }, [])
+  function toggleSidebar() {
+    setSidebarOpen((v) => {
+      localStorage.setItem('discshelf-sidebar', v ? '0' : '1')
+      return !v
+    })
+  }
 
   useEffect(() => {
     if (_hasHydrated && !token) {
@@ -36,9 +48,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen min-h-dvh">
       {/* Sidebar — desktop only */}
-      <aside className="hidden md:flex w-56 shrink-0 bg-bg-secondary border-r border-border-subtle flex-col">
-        <div className="px-6 py-6 border-b border-border-subtle">
+      <aside className={`${sidebarOpen ? 'md:flex' : 'md:hidden'} hidden w-56 shrink-0 bg-bg-secondary border-r border-border-subtle flex-col`}>
+        <div className="px-6 py-6 border-b border-border-subtle flex items-center justify-between">
           <h1 className="text-lg font-bold text-text-primary tracking-tight">Discshelf</h1>
+          <button
+            onClick={toggleSidebar}
+            className="text-text-muted hover:text-text-primary transition-colors"
+            title="Esconder sidebar"
+          >
+            <PanelLeftClose size={18} />
+          </button>
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1">
@@ -73,7 +92,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto bg-bg-primary pb-20 md:pb-0">
+      <main className="flex-1 overflow-auto bg-bg-primary pb-20 md:pb-0 relative">
+        {!sidebarOpen && (
+          <button
+            onClick={toggleSidebar}
+            className="hidden md:flex items-center justify-center fixed top-4 left-4 z-40 w-9 h-9 bg-bg-secondary border border-border-subtle rounded-[4px] text-text-muted hover:text-text-primary hover:border-accent transition-colors"
+            title="Mostrar sidebar"
+          >
+            <PanelLeft size={18} />
+          </button>
+        )}
         {children}
       </main>
 
